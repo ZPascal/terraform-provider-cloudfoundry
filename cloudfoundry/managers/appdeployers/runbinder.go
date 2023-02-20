@@ -2,23 +2,23 @@ package appdeployers
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/logcache"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 )
 
 type RunBinder struct {
-	client     *ccv2.Client
-	noaaClient *noaa.NOAAClient
+	client         *ccv2.Client
+	logCacheClient *logcache.Client
 }
 
-func NewRunBinder(client *ccv2.Client, noaaClient *noaa.NOAAClient) *RunBinder {
+func NewRunBinder(client *ccv2.Client, logCacheClient *logcache.Client) *RunBinder {
 	return &RunBinder{
-		client:     client,
-		noaaClient: noaaClient,
+		client:         client,
+		logCacheClient: logCacheClient,
 	}
 }
 
@@ -226,7 +226,7 @@ func (r RunBinder) Restart(appDeploy AppDeploy, stageTimeout time.Duration) erro
 func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {
 	var err error
 	var logs string
-	logs, err = r.noaaClient.RecentLogs(appDeploy.App.GUID)
+	logs, err = r.logCacheClient.RecentLogs(appDeploy.App.GUID)
 	if err != nil {
 		logs = fmt.Sprintf("Error occurred when recolting app %s logs: %s", appDeploy.App.Name, err.Error())
 	}

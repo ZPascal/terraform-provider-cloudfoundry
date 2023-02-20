@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/logcache"
 	"net"
 	"net/http"
 	"os"
@@ -24,7 +25,7 @@ import (
 	"code.cloudfoundry.org/cli/util/configv3"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
+
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/v3appdeployers"
 )
@@ -47,8 +48,8 @@ type Session struct {
 	// Manage upload bits like app and buildpack in full stream
 	BitsManager *bits.BitsManager
 
-	// NOAAClient permit to access to apps logs
-	NOAAClient *noaa.NOAAClient
+	//LogCache client
+	LogCacheClient *logcache.Client
 
 	// NetClient permit to access to networking policy api
 	NetClient *cfnetv1.Client
@@ -271,6 +272,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// store client in the sessions
 	s.ClientV2 = ccClientV2
 	s.ClientV3 = ccClientV3
+	s.test
 	// -------------------------
 
 	// -------------------------
@@ -388,21 +390,21 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// -------------------------
 
 	// -------------------------
-	// Create NOAA client for accessing logs from an app
-	s.NOAAClient = noaa.NewNOAAClient(s.ClientV3.Logging(), config.SkipSSLValidation(), config, configSess.AppLogsMax)
+	// Create LogCache client for accessing logs from an app
+	s.LogCacheClient = logcache.NewLogCacheClient(, config.SkipSSLValidation(), config, configSess.AppLogsMax)
 	// -------------------------
 
 	return nil
 }
 
 func (s *Session) loadDeployer() {
-	s.RunBinder = appdeployers.NewRunBinder(s.ClientV2, s.NOAAClient)
+	s.RunBinder = appdeployers.NewRunBinder(s.ClientV2, s.LogCacheClient)
 	stdStrategy := appdeployers.NewStandard(s.BitsManager, s.ClientV2, s.RunBinder)
 	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.ClientV3, s.RawClient, s.RunBinder, stdStrategy)
 	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
 
 	// Initialize deployment strategies in v3
-	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.NOAAClient)
+	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.LogCacheClient)
 	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder)
 	v3bg := v3appdeployers.NewBlueGreen(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder, v3std)
 
