@@ -9,18 +9,18 @@ import (
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/logcache"
 )
 
 type RunBinder struct {
-	client     *ccv3.Client
-	noaaClient *noaa.NOAAClient
+	client         *ccv3.Client
+	logCacheClient *logcache.Client
 }
 
-func NewRunBinder(client *ccv3.Client, noaaClient *noaa.NOAAClient) *RunBinder {
+func NewRunBinder(client *ccv3.Client, logCacheClient *logcache.Client) *RunBinder {
 	return &RunBinder{
-		client:     client,
-		noaaClient: noaaClient,
+		client:         client,
+		logCacheClient: logCacheClient,
 	}
 }
 
@@ -452,7 +452,7 @@ func (r RunBinder) Restart(appDeploy AppDeploy) (resources.Application, resource
 func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {
 	var err error
 	var logs string
-	logs, err = r.noaaClient.RecentLogs(appDeploy.App.GUID)
+	logs, err = r.logCacheClient.RecentLogs(appDeploy.App.GUID)
 	if err != nil {
 		logs = fmt.Sprintf("Error occurred when recolting app %s logs: %s", appDeploy.App.Name, err.Error())
 	}
